@@ -5,6 +5,7 @@ import (
 	crand "crypto/rand"
 	"encoding/json"
 	"fmt"
+	"log"
 	"log/slog"
 	"net"
 	"net/http"
@@ -169,7 +170,9 @@ func initializeChairDistances(ctx context.Context) error {
 		distances[i].ID = ulid.Make().String()
 	}
 
-	if _, err := db.NamedExecContext(ctx, `INSERT INTO chair_distances (id, chair_id, distance, created_at) VALUES (:id,:chair_id,:distance,:created_at)`, distances); err != nil {
+	log.Printf("distances %d", len(distances))
+
+	if _, err := db.NamedExecContext(ctx, `INSERT INTO chair_distances (id, chair_id, distance, created_at) VALUES (:id,:chair_id,:distance,:created_at)`, distances[:1000]); err != nil {
 		return fmt.Errorf("failed to insert chair distances: %w", err)
 	}
 
