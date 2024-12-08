@@ -54,6 +54,15 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(matched) == 0 {
+		if err := tx.Commit(); err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
 	assignedRides := make([]*Ride, 0, len(matched))
 	for i, m := range matched {
 		assignedRides = append(assignedRides, rides[i])
@@ -62,7 +71,7 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 
 	query, args, err := sqlx.In("UPDATE chairs SET available = FALSE WHERE id IN (?)", matched)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get available chair: %w", err))
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to update chair: %w", err))
 		return
 	}
 	if _, err := tx.ExecContext(ctx, query, args...); err != nil {
