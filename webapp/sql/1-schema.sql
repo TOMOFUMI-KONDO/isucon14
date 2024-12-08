@@ -33,6 +33,7 @@ CREATE TABLE chairs (
   access_token VARCHAR(255) NOT NULL COMMENT 'アクセストークン',
   created_at DATETIME (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '登録日時',
   updated_at DATETIME (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新日時',
+  available BOOLEAN NOT NULL DEFAULT TRUE COMMENT '椅子が利用可能かどうか',
   PRIMARY KEY (id),
   KEY `owner_id_idx` (`owner_id`),
   KEY `access_token_idx` (`access_token`)
