@@ -211,25 +211,24 @@ func appGetRides(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
-	rideIDs:=make([]string,0,len(rides))
+	rideIDs := make([]string, 0, len(rides))
 	for _, ride := range rides {
 		rideIDs = append(rideIDs, ride.ID)
 	}
 
-	completedRideIDs,err:=	getLatestCompleteRideIDs(ctx,tx,rideIDs)
-if err != nil {
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		}
-		completedRideIDMap:=make(map[string]struct{},len(completedRideIDs))
-		for _,rideID:=range completedRideIDs{
-			completedRideIDMap[rideID]=struct{}{}
-		}
+	completedRideIDs, err := getLatestCompleteRideIDs(ctx, tx, rideIDs)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	completedRideIDMap := make(map[string]struct{}, len(completedRideIDs))
+	for _, rideID := range completedRideIDs {
+		completedRideIDMap[rideID] = struct{}{}
+	}
 
 	items := []getAppRidesResponseItem{}
 	for _, ride := range rides {
-		if _,ok:=completedRideIDMap[ride.ID];!ok{
+		if _, ok := completedRideIDMap[ride.ID]; !ok {
 			continue
 		}
 
@@ -309,7 +308,7 @@ func getLatestRideStatus(ctx context.Context, tx executableGet, rideID string) (
 }
 
 func getLatestCompleteRideIDs(ctx context.Context, tx executableSelect, rideIDs []string) ([]string, error) {
-	completedRideIDs:= make([]string,len(rideIDs))
+	completedRideIDs := make([]string, len(rideIDs))
 	if len(rideIDs) == 0 {
 		return completedRideIDs, nil
 	}
@@ -319,7 +318,7 @@ func getLatestCompleteRideIDs(ctx context.Context, tx executableSelect, rideIDs 
 		return nil, err
 	}
 
-	if err := tx.SelectContext(ctx,&completedRideIDs, query, args...);err != nil {
+	if err := tx.SelectContext(ctx, &completedRideIDs, query, args...); err != nil {
 		return nil, err
 	}
 
@@ -354,17 +353,17 @@ func appPostRides(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rideIDs:=make([]string,0,len(rides))
+	rideIDs := make([]string, 0, len(rides))
 	for _, ride := range rides {
 		rideIDs = append(rideIDs, ride.ID)
 	}
-	completedRideIDs,err:=getLatestCompleteRideIDs(ctx,tx,rideIDs)
+	completedRideIDs, err := getLatestCompleteRideIDs(ctx, tx, rideIDs)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get latest complete ride ids: %w", err))
 		return
 	}
 
-	continuingRideCount := len(rides)-len(completedRideIDs)
+	continuingRideCount := len(rides) - len(completedRideIDs)
 
 	if continuingRideCount > 0 {
 		writeError(w, http.StatusConflict, errors.New("ride already exists"))
@@ -808,24 +807,35 @@ func getChairStats(ctx context.Context, tx *sqlx.Tx, chairID string) (appGetNoti
 	if err != nil {
 		return stats, err
 	}
+	rideMap := make(map[string]*Ride, len(rides))
+	for _, ride := range rides {
+		rideMap[ride.ID] = &ride
+	}
+
+	rideStatuses := make([]RideStatus, 0, len(rides))
+
+	rideIDs := make([]string, 0, len(rides))
+	for _, ride := range rides {
+		rideIDs = append(rideIDs, ride.ID)
+	}
+	query, args, err := sqlx.In(`SELECT * FROM ride_statuses WHERE ride_id IN (?)`, rideIDs)
+	if err != nil {
+		return stats, fmt.Errorf("failed to create sql: %w", err)
+	}
+	if err := tx.SelectContext(ctx, &rideStatuses, query, args...); err != nil {
+		return stats, fmt.Errorf("failed to get ride statuses: %w", err)
+	}
+	rideStatusMap := make(map[string][]RideStatus, len(rideStatuses))
+	for _, status := range rideStatuses {
+		rideStatusMap[status.RideID] = append(rideStatusMap[status.RideID], status)
+	}
 
 	totalRideCount := 0
 	totalEvaluation := 0.0
-	for _, ride := range rides {
-		rideStatuses := []RideStatus{}
-		err = tx.SelectContext(
-			ctx,
-			&rideStatuses,
-			`SELECT * FROM ride_statuses WHERE ride_id = ? ORDER BY created_at`,
-			ride.ID,
-		)
-		if err != nil {
-			return stats, err
-		}
-
+	for _, rideID := range rideIDs {
 		var arrivedAt, pickupedAt *time.Time
 		var isCompleted bool
-		for _, status := range rideStatuses {
+		for _, status := range rideStatusMap[rideID] {
 			if status.Status == "ARRIVED" {
 				arrivedAt = &status.CreatedAt
 			} else if status.Status == "CARRYING" {
@@ -843,7 +853,7 @@ func getChairStats(ctx context.Context, tx *sqlx.Tx, chairID string) (appGetNoti
 		}
 
 		totalRideCount++
-		totalEvaluation += float64(*ride.Evaluation)
+		totalEvaluation += float64(*(rideMap[rideID].Evaluation))
 	}
 
 	stats.TotalRidesCount = totalRideCount
