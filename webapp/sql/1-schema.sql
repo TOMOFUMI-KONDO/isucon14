@@ -55,7 +55,6 @@ DROP TABLE IF EXISTS chair_distances;
 CREATE TABLE chair_distances (
   id VARCHAR(26) NOT NULL,
   chair_id VARCHAR(26) NOT NULL COMMENT '椅子ID',
-  owner_id VARCHAR(26) NOT NULL COMMENT 'オーナーID',
   distance INTEGER NOT NULL COMMENT '移動距離',
   created_at DATETIME (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '登録日時',
   PRIMARY KEY (id)
@@ -102,7 +101,7 @@ CREATE TABLE rides (
   created_at DATETIME (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '要求日時',
   updated_at DATETIME (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '状態更新日時',
   PRIMARY KEY (id),
-  KEY `chair_id_updated_at_desc_idx` (`chair_id`, `updated_at` DESC)
+  KEY `updated_at_desc_idx` (`updated_at` DESC)
 ) COMMENT = 'ライド情報テーブル';
 
 DROP TABLE IF EXISTS ride_statuses;
