@@ -156,10 +156,12 @@ func initializeChairDistances(ctx context.Context) error {
 		&distances,
 		`SELECT * FROM (
 			SELECT chair_id,
-					created_at,
+					owner_id,
+					chair_locations.created_at,
 					ABS(latitude - LAG(latitude) OVER (PARTITION BY chair_id ORDER BY created_at)) +
 					ABS(longitude - LAG(longitude) OVER (PARTITION BY chair_id ORDER BY created_at)) AS distance
 				FROM chair_locations
+				JOIN chairs ON chair_locations.chair_id = chairs.id
 			) tmp
 			WHERE distance IS NOT NULL`,
 	); err != nil {
@@ -176,7 +178,7 @@ func initializeChairDistances(ctx context.Context) error {
 		if len(distances) == 0 {
 			break
 		}
-		if _, err := db.NamedExecContext(ctx, `INSERT INTO chair_distances (id, chair_id, distance, created_at) VALUES (:id,:chair_id,:distance,:created_at)`, distances[:min(offset, len(distances))]); err != nil {
+		if _, err := db.NamedExecContext(ctx, `INSERT INTO chair_distances (id, chair_id, owner_id, distance, created_at) VALUES (:id,:chair_id,:distance,:created_at)`, distances[:min(offset, len(distances))]); err != nil {
 			return fmt.Errorf("failed to insert chair distances: %w", err)
 		}
 		if len(distances) < offset {
