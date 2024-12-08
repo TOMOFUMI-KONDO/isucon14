@@ -70,9 +70,11 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := tx.NamedExecContext(ctx, "UPDATE rides SET chair_id = :chair_id WHERE id = :id", assignedRides); err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
+	for _, r := range assignedRides {
+		if _, err := tx.ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", r.ChairID, r.ID); err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
 	}
 
 	if err := tx.Commit(); err != nil {
