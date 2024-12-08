@@ -111,7 +111,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
-	var latestChairLoc *ChairLocation
+	latestChairLoc := &ChairLocation{}
 	if err := tx.GetContext(ctx, latestChairLoc, "SELECT latitude, longitude FROM chair_locations where chair_id = ? ORDER BY created_at DESC limit 1", chair.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			latestChairLoc = nil
