@@ -210,14 +210,25 @@ func appGetRides(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	items := []getAppRidesResponseItem{}
+
+	rideIDs:=make([]string,0,len(rides))
 	for _, ride := range rides {
-		status, err := getLatestRideStatus(ctx, tx, ride.ID)
-		if err != nil {
+		rideIDs = append(rideIDs, ride.ID)
+	}
+
+	completedRideIDs,err:=	getLatestCompleteRideIDs(ctx,tx,rideIDs)
+if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
-		if status != "COMPLETED" {
+		completedRideIDMap:=make(map[string]struct{},len(completedRideIDs))
+		for _,rideID:=range completedRideIDs{
+			completedRideIDMap[rideID]=struct{}{}
+		}
+
+	items := []getAppRidesResponseItem{}
+	for _, ride := range rides {
+		if _,ok:=completedRideIDMap[ride.ID];!ok{
 			continue
 		}
 
@@ -283,12 +294,35 @@ type executableGet interface {
 	GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
 }
 
+type executableSelect interface {
+	Select(dest interface{}, query string, args ...interface{}) error
+	SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
+}
+
 func getLatestRideStatus(ctx context.Context, tx executableGet, rideID string) (string, error) {
 	status := ""
 	if err := tx.GetContext(ctx, &status, `SELECT status FROM ride_statuses WHERE ride_id = ? ORDER BY created_at DESC LIMIT 1`, rideID); err != nil {
 		return "", err
 	}
 	return status, nil
+}
+
+func getLatestCompleteRideIDs(ctx context.Context, tx executableSelect, rideIDs []string) ([]string, error) {
+	completedRideIDs:= make([]string,len(rideIDs))
+	if len(rideIDs) == 0 {
+		return completedRideIDs, nil
+	}
+
+	query, args, err := sqlx.In(`SELECT ride_id FROM ride_statuses WHERE ride_id IN (?) AND status = 'COMPLETED'`, rideIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.SelectContext(ctx,&completedRideIDs, query, args...);err != nil {
+		return nil, err
+	}
+
+	return completedRideIDs, nil
 }
 
 func appPostRides(w http.ResponseWriter, r *http.Request) {
