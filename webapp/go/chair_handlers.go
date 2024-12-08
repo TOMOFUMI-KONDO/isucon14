@@ -135,7 +135,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 		chairDistanceID := ulid.Make().String()
 		if _, err := tx.ExecContext(
 			ctx,
-			`INSERT INTO chair_distances (id, chair_id, distance) VALUES (?, ?, ABS(? - ?) + ABS(? - ?))`, chairDistanceID, chair.ID, req.Latitude, latestChairLoc.Latitude, req.Longitude, latestChairLoc.Longitude); err != nil {
+			`INSERT INTO chair_distances (id, chair_id, owner_id, distance) VALUES (?, ?, ABS(? - ?) + ABS(? - ?))`, chairDistanceID, chair.ID, chair.OwnerID, req.Latitude, latestChairLoc.Latitude, req.Longitude, latestChairLoc.Longitude); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to insert into chair_distances: %w", err))
 			return
 		}

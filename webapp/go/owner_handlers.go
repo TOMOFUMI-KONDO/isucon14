@@ -209,9 +209,9 @@ FROM chairs
        LEFT JOIN (SELECT chair_id,
                           SUM(IFNULL(distance, 0)) AS total_distance,
                           MAX(created_at)          AS total_distance_updated_at
-                   FROM chair_distances GROUP BY chair_id) distance_table ON distance_table.chair_id = chairs.id
+                   FROM chair_distances WHERE owner_id = ? GROUP BY chair_id) distance_table ON distance_table.chair_id = chairs.id
 WHERE owner_id = ?
-`, owner.ID); err != nil {
+`, owner.ID, owner.ID); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
