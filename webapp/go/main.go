@@ -155,13 +155,13 @@ func initializeChairDistances(ctx context.Context) error {
 		ctx,
 		&distances,
 		`SELECT * FROM (
-			SELECT chair_id,
-					owner_id,
-					chair_locations.created_at,
-					ABS(latitude - LAG(latitude) OVER (PARTITION BY chair_id ORDER BY created_at)) +
-					ABS(longitude - LAG(longitude) OVER (PARTITION BY chair_id ORDER BY created_at)) AS distance
-				FROM chair_locations
-				JOIN chairs ON chair_locations.chair_id = chairs.id
+			SELECT cl.chair_id as chair_id,
+					c.owner_id as owner_id,
+					cl.created_at as created_at,
+					ABS(cl.latitude - LAG(cl.latitude) OVER (PARTITION BY cl.chair_id ORDER BY cl.created_at)) +
+					ABS(cl.longitude - LAG(cl.longitude) OVER (PARTITION BY cl.chair_id ORDER BY cl.created_at)) AS distance
+				FROM chair_locations cl
+				JOIN chairs c ON cl.chair_id = c.id
 			) tmp
 			WHERE distance IS NOT NULL`,
 	); err != nil {
