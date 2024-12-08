@@ -169,7 +169,7 @@ func initializeChairDistances(ctx context.Context) error {
 		distances[i].ID = ulid.Make().String()
 	}
 
-	if _, err := db.NamedExecContext(ctx, `INSERT INTO chair_distances (id, chair_id, distance, created_at) VALUES (:id, :chair_id, :distance, :created_at`, distances); err != nil {
+	if _, err := db.NamedExecContext(ctx, `INSERT INTO chair_distances (id, chair_id, distance, created_at) VALUES (:id, :chair_id, :distance, :created_at)`, distances); err != nil {
 		return fmt.Errorf("failed to insert chair distances: %w", err)
 	}
 
