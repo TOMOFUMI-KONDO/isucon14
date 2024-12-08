@@ -111,10 +111,14 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
-	var latestChairLoc ChairLocation
-	if err := tx.GetContext(ctx, &latestChairLoc, "SELECT latitude, longitude FROM chair_locations where chair_id = ? ORDER BY created_at DESC limit 1", chair.ID); err != nil {
-		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get chair location: %w", err))
-		return
+	var latestChairLoc *ChairLocation
+	if err := tx.GetContext(ctx, latestChairLoc, "SELECT latitude, longitude FROM chair_locations where chair_id = ? ORDER BY created_at DESC limit 1", chair.ID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			latestChairLoc = nil
+		} else {
+			writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get chair location: %w", err))
+			return
+		}
 	}
 
 	chairLocationID := ulid.Make().String()
@@ -127,12 +131,14 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	chairDistanceID := ulid.Make().String()
-	if _, err := tx.ExecContext(
-		ctx,
-		`INSERT INTO chair_distances (id, chair_id, distance) VALUES (?, ?, ABS(? - ?) + ABS(? - ?))`, chairDistanceID, chair.ID, req.Latitude, latestChairLoc.Latitude, req.Longitude, latestChairLoc.Longitude); err != nil {
-		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to insert into chair_distances: %w", err))
-		return
+	if latestChairLoc != nil {
+		chairDistanceID := ulid.Make().String()
+		if _, err := tx.ExecContext(
+			ctx,
+			`INSERT INTO chair_distances (id, chair_id, distance) VALUES (?, ?, ABS(? - ?) + ABS(? - ?))`, chairDistanceID, chair.ID, req.Latitude, latestChairLoc.Latitude, req.Longitude, latestChairLoc.Longitude); err != nil {
+			writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to insert into chair_distances: %w", err))
+			return
+		}
 	}
 
 	location := &ChairLocation{}
