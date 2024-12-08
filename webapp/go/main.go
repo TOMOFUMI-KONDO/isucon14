@@ -170,14 +170,13 @@ func initializeChairDistances(ctx context.Context) error {
 		distances[i].ID = ulid.Make().String()
 	}
 
-	log.Printf("distances %d", len(distances))
-
 	offset := 10000
 	for {
+		log.Printf("distances %d", len(distances))
 		if len(distances) == 0 {
 			break
 		}
-		if _, err := db.NamedExecContext(ctx, `INSERT INTO chair_distances (id, chair_id, distance, created_at) VALUES (:id,:chair_id,:distance,:created_at)`, distances[:max(offset, len(distances))]); err != nil {
+		if _, err := db.NamedExecContext(ctx, `INSERT INTO chair_distances (id, chair_id, distance, created_at) VALUES (:id,:chair_id,:distance,:created_at)`, distances[:min(offset, len(distances))]); err != nil {
 			return fmt.Errorf("failed to insert chair distances: %w", err)
 		}
 		distances = distances[offset:]
