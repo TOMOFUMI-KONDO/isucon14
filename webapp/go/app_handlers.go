@@ -331,15 +331,22 @@ func getNotCompleteRideIDs(ctx context.Context, tx executableSelect, rideIDs []s
 		return completedRideIDs, nil
 	}
 
-	query, args, err := sqlx.In(`SELECT ride_id FROM ride_statuses WHERE ride_id IN (?) AND status != 'COMPLETED'`, rideIDs)
+	query, args, err := sqlx.In(
+		`SELECT rs.ride_id
+			FROM ride_statuses rs
+			JOIN (
+				SELECT ride_id, MAX(created_at) AS latest_created_at
+				FROM ride_statuses
+				GROUP BY ride_id
+			) latest ON rs.ride_id = latest.ride_id AND rs.created_at = latest.latest_created_at
+			WHERE rs.status != 'COMPLETED';`,
+		rideIDs,
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	if err := tx.SelectContext(ctx, &completedRideIDs, query, args...); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return completedRideIDs, nil
-		}
 		return nil, err
 	}
 
