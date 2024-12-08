@@ -216,7 +216,7 @@ func appGetRides(w http.ResponseWriter, r *http.Request) {
 		rideIDs = append(rideIDs, ride.ID)
 	}
 
-	completedRideIDs, err := getLatestCompleteRideIDs(ctx, tx, rideIDs)
+	completedRideIDs, err := getCompleteRideIDs(ctx, tx, rideIDs)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -307,7 +307,7 @@ func getLatestRideStatus(ctx context.Context, tx executableGet, rideID string) (
 	return status, nil
 }
 
-func getLatestCompleteRideIDs(ctx context.Context, tx executableSelect, rideIDs []string) ([]string, error) {
+func getCompleteRideIDs(ctx context.Context, tx executableSelect, rideIDs []string) ([]string, error) {
 	completedRideIDs := make([]string, len(rideIDs))
 	if len(rideIDs) == 0 {
 		return completedRideIDs, nil
@@ -319,6 +319,27 @@ func getLatestCompleteRideIDs(ctx context.Context, tx executableSelect, rideIDs 
 	}
 
 	if err := tx.SelectContext(ctx, &completedRideIDs, query, args...); err != nil {
+		return nil, err
+	}
+
+	return completedRideIDs, nil
+}
+
+func getNotCompleteRideIDs(ctx context.Context, tx executableSelect, rideIDs []string) ([]string, error) {
+	completedRideIDs := make([]string, len(rideIDs))
+	if len(rideIDs) == 0 {
+		return completedRideIDs, nil
+	}
+
+	query, args, err := sqlx.In(`SELECT ride_id FROM ride_statuses WHERE ride_id IN (?) AND status != 'COMPLETED'`, rideIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.SelectContext(ctx, &completedRideIDs, query, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return completedRideIDs, nil
+		}
 		return nil, err
 	}
 
@@ -357,7 +378,7 @@ func appPostRides(w http.ResponseWriter, r *http.Request) {
 	for _, ride := range rides {
 		rideIDs = append(rideIDs, ride.ID)
 	}
-	completedRideIDs, err := getLatestCompleteRideIDs(ctx, tx, rideIDs)
+	completedRideIDs, err := getCompleteRideIDs(ctx, tx, rideIDs)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get latest complete ride ids: %w", err))
 		return
@@ -939,20 +960,17 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		skip := false
+		rideIDs := make([]string, 0, len(rides))
 		for _, ride := range rides {
-			// 過去にライドが存在し、かつ、それが完了していない場合はスキップ
-			status, err := getLatestRideStatus(ctx, tx, ride.ID)
-			if err != nil {
-				writeError(w, http.StatusInternalServerError, err)
-				return
-			}
-			if status != "COMPLETED" {
-				skip = true
-				break
-			}
+			rideIDs = append(rideIDs, ride.ID)
 		}
-		if skip {
+
+		notCompletedRideIDs, err := getNotCompleteRideIDs(ctx, tx, rideIDs)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get latest not complete ride ids: %w", err))
+			return
+		}
+		if len(notCompletedRideIDs) > 0 {
 			continue
 		}
 
