@@ -110,7 +110,7 @@ CREATE TABLE ride_statuses (
   PRIMARY KEY (id),
   KEY `created_at_desc_idx` (`created_at` DESC),
   KEY `ride_id_chair_sent_at_created_at_idx` (`ride_id`, `chair_sent_at`, `created_at`),
-  KEY `ride_id_chair_sent_at_created_at_idx` (`ride_id`, `app_sent_at`, `created_at`)
+  KEY `ride_id_app_sent_at_created_at_idx` (`ride_id`, `app_sent_at`, `created_at`)
 ) COMMENT = 'ライドステータスの変更履歴テーブル';
 
 DROP TABLE IF EXISTS owners;
