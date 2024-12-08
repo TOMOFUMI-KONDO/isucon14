@@ -337,6 +337,7 @@ func getNotCompleteRideIDs(ctx context.Context, tx executableSelect, rideIDs []s
 			JOIN (
 				SELECT ride_id, MAX(created_at) AS latest_created_at
 				FROM ride_statuses
+				WHERE ride_id IN (?)
 				GROUP BY ride_id
 			) latest ON rs.ride_id = latest.ride_id AND rs.created_at = latest.latest_created_at
 			WHERE rs.status != 'COMPLETED';`,
