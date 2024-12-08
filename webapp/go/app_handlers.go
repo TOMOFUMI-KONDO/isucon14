@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -353,17 +354,17 @@ func appPostRides(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	continuingRideCount := 0
+	rideIDs:=make([]string,0,len(rides))
 	for _, ride := range rides {
-		status, err := getLatestRideStatus(ctx, tx, ride.ID)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		}
-		if status != "COMPLETED" {
-			continuingRideCount++
-		}
+		rideIDs = append(rideIDs, ride.ID)
 	}
+	completedRideIDs,err:=getLatestCompleteRideIDs(ctx,tx,rideIDs)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get latest complete ride ids: %w", err))
+		return
+	}
+
+	continuingRideCount := len(rides)-len(completedRideIDs)
 
 	if continuingRideCount > 0 {
 		writeError(w, http.StatusConflict, errors.New("ride already exists"))
