@@ -153,11 +153,13 @@ func initializeChairDistances(ctx context.Context) error {
 	if err := db.SelectContext(
 		ctx,
 		&distances,
-		`SELECT chair_id,
-				created_at,
-				ABS(latitude - LAG(latitude) OVER (PARTITION BY chair_id ORDER BY created_at)) +
-				ABS(longitude - LAG(longitude) OVER (PARTITION BY chair_id ORDER BY created_at)) AS distance
-			FROM chair_locations
+		`SELECT * FROM (
+			SELECT chair_id,
+					created_at,
+					ABS(latitude - LAG(latitude) OVER (PARTITION BY chair_id ORDER BY created_at)) +
+					ABS(longitude - LAG(longitude) OVER (PARTITION BY chair_id ORDER BY created_at)) AS distance
+				FROM chair_locations
+			) tmp
 			WHERE distance IS NOT NULL`,
 	); err != nil {
 		return fmt.Errorf("failed to select chair locations: %w", err)
