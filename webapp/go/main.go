@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	crand "crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
+	"github.com/oklog/ulid/v2"
 )
 
 var db *sqlx.DB
@@ -133,12 +135,42 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := initializeChairDistances(ctx); err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to initialize chair distances: %w", err))
+		return
+	}
+
 	if _, err := db.ExecContext(ctx, "UPDATE settings SET value = ? WHERE name = 'payment_gateway_url'", req.PaymentServer); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
+}
+
+func initializeChairDistances(ctx context.Context) error {
+	distances := make([]*ChairDistance, 0)
+	if err := db.SelectContext(
+		ctx,
+		&distances,
+		`SELECT chair_id,
+				created_at,
+				ABS(latitude - LAG(latitude) OVER (PARTITION BY chair_id ORDER BY created_at)) +
+				ABS(longitude - LAG(longitude) OVER (PARTITION BY chair_id ORDER BY created_at)) AS distance
+			FROM chair_locations`,
+	); err != nil {
+		return fmt.Errorf("failed to select chair locations: %w", err)
+	}
+
+	for i := range distances {
+		distances[i].ID = ulid.Make().String()
+	}
+
+	if _, err := db.NamedExecContext(ctx, `INSERT INTO chair_distances (id, chair_id, distance, created_at) VALUES (:id, :chair_id, :distance, :created_at`, distances); err != nil {
+		return fmt.Errorf("failed to insert chair distances: %w", err)
+	}
+
+	return nil
 }
 
 type Coordinate struct {
