@@ -179,6 +179,9 @@ func initializeChairDistances(ctx context.Context) error {
 		if _, err := db.NamedExecContext(ctx, `INSERT INTO chair_distances (id, chair_id, distance, created_at) VALUES (:id,:chair_id,:distance,:created_at)`, distances[:min(offset, len(distances))]); err != nil {
 			return fmt.Errorf("failed to insert chair distances: %w", err)
 		}
+		if len(distances) < offset {
+			break
+		}
 		distances = distances[offset:]
 	}
 
