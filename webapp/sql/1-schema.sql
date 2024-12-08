@@ -58,7 +58,8 @@ CREATE TABLE chair_distances (
   owner_id VARCHAR(26) NOT NULL COMMENT 'オーナーID',
   distance INTEGER NOT NULL COMMENT '移動距離',
   created_at DATETIME (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '登録日時',
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  KEY `owner_id_idx` (`owner_id`)
 ) COMMENT = '椅子の移動距離情報テーブル';
 
 DROP TABLE IF EXISTS users;
