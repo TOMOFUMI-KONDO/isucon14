@@ -20,7 +20,7 @@ import (
 	"github.com/oklog/ulid/v2"
 )
 
-const retryAfterMs = 500
+const retryAfterMs = 100
 
 var db *sqlx.DB
 
