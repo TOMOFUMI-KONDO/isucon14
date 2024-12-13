@@ -218,7 +218,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	yetSentRideStatus := RideStatus{}
 	status := ""
 
-	if err := tx.GetContext(ctx, ride, `SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC LIMIT 1`, chair.ID); err != nil {
+	if err := tx.GetContext(ctx, ride, `SELECT * FROM rides WHERE chair_id = ? AND NOT notified_completed ORDER BY updated_at LIMIT 1`, chair.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeJSON(w, http.StatusOK, &chairGetNotificationResponse{
 				RetryAfterMs: retryAfterMs,
@@ -252,6 +252,14 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if yetSentRideStatus.ID != "" {
+		if yetSentRideStatus.Status == "COMPLETED" {
+			_, err := tx.ExecContext(ctx, `UPDATE rides SET notified_completed = 1 WHERE id = ?`, ride.ID)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to update notified_completed: %w", err))
+				return
+			}
+		}
+
 		_, err := tx.ExecContext(ctx, `UPDATE ride_statuses SET chair_sent_at = CURRENT_TIMESTAMP(6) WHERE id = ?`, yetSentRideStatus.ID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)

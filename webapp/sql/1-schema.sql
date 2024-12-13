@@ -103,6 +103,7 @@ CREATE TABLE rides (
   evaluation INTEGER NULL COMMENT '評価',
   created_at DATETIME (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '要求日時',
   updated_at DATETIME (6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '状態更新日時',
+  notified_completed TINYINT (1) NOT NULL DEFAULT 0 COMMENT '完了通知済みかどうか',
   PRIMARY KEY (id),
   KEY `chair_id_updated_at_desc_idx` (chair_id, `updated_at` DESC),
   KEY `user_id_created_at_desc_idx` (`user_id`, `created_at` DESC),
