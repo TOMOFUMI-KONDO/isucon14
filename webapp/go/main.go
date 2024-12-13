@@ -20,6 +20,8 @@ import (
 	"github.com/oklog/ulid/v2"
 )
 
+const retryAfterMs = 500
+
 var db *sqlx.DB
 
 func main() {
