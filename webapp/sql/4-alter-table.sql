@@ -4,4 +4,4 @@ ADD COLUMN `available` BOOLEAN NOT NULL DEFAULT TRUE COMMENT '椅子が利用可
 ALTER TABLE chairs ADD INDEX `is_active_available_idx` (`is_active`, `available`);
 
 ALTER TABLE rides
-ADD COLUMN notified_completed TINYINT (1) NOT NULL DEFAULT 0 COMMENT '完了通知済みかどうか';
+ADD COLUMN `notified_completed` BOOLEAN NOT NULL DEFAULT FALSE COMMENT '完了通知済みかどうか';
