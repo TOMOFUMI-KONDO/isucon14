@@ -76,3 +76,6 @@ Temporary Items
 .apdisk
 
 isuride
+
+# build artifacts
+go
