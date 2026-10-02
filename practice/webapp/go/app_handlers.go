@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -677,7 +678,7 @@ func appGetNotification(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-		writeError(w, http.StatusInternalServerError, err)
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get latest ride: %w", err))
 		return
 	}
 
@@ -687,11 +688,11 @@ func appGetNotification(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, sql.ErrNoRows) {
 			status, err = getLatestRideStatus(ctx, tx, ride.ID)
 			if err != nil {
-				writeError(w, http.StatusInternalServerError, err)
+				writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get latest ride status: %w", err))
 				return
 			}
 		} else {
-			writeError(w, http.StatusInternalServerError, err)
+			writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get yet sent ride status: %w", err))
 			return
 		}
 	} else {
@@ -700,7 +701,7 @@ func appGetNotification(w http.ResponseWriter, r *http.Request) {
 
 	fare, err := calculateDiscountedFare(ctx, tx, user.ID, ride, ride.PickupLatitude, ride.PickupLongitude, ride.DestinationLatitude, ride.DestinationLongitude)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to calculate discounted fare: %w", err))
 		return
 	}
 
@@ -726,13 +727,13 @@ func appGetNotification(w http.ResponseWriter, r *http.Request) {
 	if ride.ChairID.Valid {
 		chair := &Chair{}
 		if err := tx.GetContext(ctx, chair, `SELECT * FROM chairs WHERE id = ?`, ride.ChairID); err != nil {
-			writeError(w, http.StatusInternalServerError, err)
+			writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get chair: %w", err))
 			return
 		}
 
 		stats, err := getChairStats(ctx, tx, chair.ID)
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, err)
+			writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get chair stats: %w", err))
 			return
 		}
 
@@ -747,13 +748,13 @@ func appGetNotification(w http.ResponseWriter, r *http.Request) {
 	if yetSentRideStatus.ID != "" {
 		_, err := tx.ExecContext(ctx, `UPDATE ride_statuses SET app_sent_at = CURRENT_TIMESTAMP(6) WHERE id = ?`, yetSentRideStatus.ID)
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, err)
+			writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to update ride status app_sent_at: %w", err))
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		writeError(w, http.StatusInternalServerError, err)
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to commit transaction: %w", err))
 		return
 	}
 
