@@ -21,6 +21,8 @@ type paymentGatewayGetPaymentsResponseOne struct {
 	Status string `json:"status"`
 }
 
+var semPaymentGateway = make(chan struct{}, 10)
+
 func requestPaymentGatewayPostPayment(ctx context.Context, paymentGatewayURL string, token string, param *paymentGatewayPostPaymentRequest, retrieveRidesOrderByCreatedAtAsc func() ([]Ride, error)) error {
 	b, err := json.Marshal(param)
 	if err != nil {
@@ -32,6 +34,9 @@ func requestPaymentGatewayPostPayment(ctx context.Context, paymentGatewayURL str
 	retry := 0
 	for {
 		err := func() error {
+			semPaymentGateway <- struct{}{}
+			defer func() { <-semPaymentGateway }()
+
 			req, err := http.NewRequestWithContext(ctx, http.MethodPost, paymentGatewayURL+"/payments", bytes.NewBuffer(b))
 			if err != nil {
 				return err
@@ -84,7 +89,7 @@ func requestPaymentGatewayPostPayment(ctx context.Context, paymentGatewayURL str
 		if err != nil {
 			if retry < 5 {
 				retry++
-				time.Sleep(1000 * time.Millisecond)
+				time.Sleep(100 * time.Millisecond)
 				continue
 			} else {
 				return err
