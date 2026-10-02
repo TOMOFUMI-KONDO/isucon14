@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
@@ -606,7 +605,6 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get payment gateway url: %w", err))
 		return
 	}
-	slog.Info("requesting payment gateway", "url", paymentGatewayURL)
 
 	if err := requestPaymentGatewayPostPayment(ctx, paymentGatewayURL, paymentToken.Token, paymentGatewayRequest, func() ([]Ride, error) {
 		rides := []Ride{}
