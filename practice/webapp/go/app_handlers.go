@@ -533,12 +533,12 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, errors.New("ride not found"))
 			return
 		}
-		writeError(w, http.StatusInternalServerError, err)
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get ride: %w", err))
 		return
 	}
 	status, err := getLatestRideStatus(ctx, tx, ride.ID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get latest ride status: %w", err))
 		return
 	}
 
@@ -552,11 +552,11 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		`UPDATE rides SET evaluation = ? WHERE id = ?`,
 		req.Evaluation, rideID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to update ride evaluation: %w", err))
 		return
 	}
 	if count, err := result.RowsAffected(); err != nil {
-		writeError(w, http.StatusInternalServerError, err)
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get rows affected: %w", err))
 		return
 	} else if count == 0 {
 		writeError(w, http.StatusNotFound, errors.New("ride not found"))
@@ -568,7 +568,7 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		`INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)`,
 		ulid.Make().String(), rideID, "COMPLETED")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to insert ride status: %w", err))
 		return
 	}
 
@@ -577,7 +577,7 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, errors.New("ride not found"))
 			return
 		}
-		writeError(w, http.StatusInternalServerError, err)
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get ride: %w", err))
 		return
 	}
 
@@ -587,13 +587,13 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusBadRequest, errors.New("payment token not registered"))
 			return
 		}
-		writeError(w, http.StatusInternalServerError, err)
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get payment token: %w", err))
 		return
 	}
 
 	fare, err := calculateDiscountedFare(ctx, tx, ride.UserID, ride, ride.PickupLatitude, ride.PickupLongitude, ride.DestinationLatitude, ride.DestinationLongitude)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to calculate discounted fare: %w", err))
 		return
 	}
 	paymentGatewayRequest := &paymentGatewayPostPaymentRequest{
@@ -602,7 +602,7 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 
 	var paymentGatewayURL string
 	if err := tx.GetContext(ctx, &paymentGatewayURL, "SELECT value FROM settings WHERE name = 'payment_gateway_url'"); err != nil {
-		writeError(w, http.StatusInternalServerError, err)
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get payment gateway url: %w", err))
 		return
 	}
 
@@ -614,10 +614,10 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		return rides, nil
 	}); err != nil {
 		if errors.Is(err, erroredUpstream) {
-			writeError(w, http.StatusBadGateway, err)
+			writeError(w, http.StatusBadGateway, fmt.Errorf("failed to request payment gateway: %w", err))
 			return
 		}
-		writeError(w, http.StatusInternalServerError, err)
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to request payment gateway: %w", err))
 		return
 	}
 
