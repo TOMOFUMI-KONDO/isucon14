@@ -21,7 +21,7 @@ type paymentGatewayGetPaymentsResponseOne struct {
 	Status string `json:"status"`
 }
 
-var semPaymentGateway = make(chan struct{}, 3)
+var semPaymentGateway = make(chan struct{}, 100)
 
 func requestPaymentGatewayPostPayment(ctx context.Context, paymentGatewayURL string, token string, param *paymentGatewayPostPaymentRequest, retrieveRidesOrderByCreatedAtAsc func() ([]Ride, error)) error {
 	b, err := json.Marshal(param)
