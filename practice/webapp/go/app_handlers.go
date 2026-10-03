@@ -309,7 +309,7 @@ func getContinuingRideCount(ctx context.Context, tx executableGet, userID string
 		)
 		SELECT COUNT(*)
 		FROM ranked_ride_statuses
-		JOIN ride_statuses ON ride_statuses.ride_id = rides.id
+		JOIN rides ON ranked_ride_statuses.ride_id = rides.id
 		WHERE
 			rides.user_id = ? AND
 			ranked_ride_statuses.rn = 1 AND
