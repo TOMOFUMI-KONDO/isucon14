@@ -631,6 +631,8 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+const appGetNotificationRetryAfterMs = 300
+
 type appGetNotificationResponse struct {
 	Data         *appGetNotificationResponseData `json:"data"`
 	RetryAfterMs int                             `json:"retry_after_ms"`
@@ -674,7 +676,7 @@ func appGetNotification(w http.ResponseWriter, r *http.Request) {
 	if err := tx.GetContext(ctx, ride, `SELECT * FROM rides WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`, user.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeJSON(w, http.StatusOK, &appGetNotificationResponse{
-				RetryAfterMs: 30,
+				RetryAfterMs: appGetNotificationRetryAfterMs,
 			})
 			return
 		}
@@ -721,7 +723,7 @@ func appGetNotification(w http.ResponseWriter, r *http.Request) {
 			CreatedAt: ride.CreatedAt.UnixMilli(),
 			UpdateAt:  ride.UpdatedAt.UnixMilli(),
 		},
-		RetryAfterMs: 30,
+		RetryAfterMs: appGetNotificationRetryAfterMs,
 	}
 
 	if ride.ChairID.Valid {
@@ -729,7 +731,7 @@ func appGetNotification(w http.ResponseWriter, r *http.Request) {
 		if err := tx.GetContext(ctx, chair, `SELECT * FROM chairs WHERE id = ?`, ride.ChairID); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				writeJSON(w, http.StatusOK, &appGetNotificationResponse{
-					RetryAfterMs: 30,
+					RetryAfterMs: appGetNotificationRetryAfterMs,
 				})
 				return
 			}
