@@ -36,8 +36,8 @@ CREATE TABLE chairs
     ) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新日時',
     total_distance INTEGER NOT NULL DEFAULT 0,
     total_distance_updated_at DATETIME(6),
-    latitude INTEGER NOT NULL COMMENT '経度',
-    longitude INTEGER NOT NULL COMMENT '緯度',
+    latitude INTEGER COMMENT '経度',
+    longitude INTEGER COMMENT '緯度',
     PRIMARY KEY (id),
     KEY owner_id (owner_id),
     KEY access_token (access_token)
