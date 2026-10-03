@@ -292,6 +292,36 @@ func getLatestRideStatus(ctx context.Context, tx executableGet, rideID string) (
 	return status, nil
 }
 
+func getContinuingRideCount(ctx context.Context, tx executableGet, userID string) (int, error) {
+	var count int
+	if err := tx.GetContext(
+		ctx,
+		&count,
+		`WITH ranked_ride_statuses AS (
+			SELECT 
+				ride_id,
+				status,
+				ROW_NUMBER() OVER (
+					PARTITION BY ride_id
+					ORDER BY created_at DESC
+				) AS rn
+			FROM ride_statuses
+		)
+		SELECT COUNT(*)
+		FROM ranked_ride_statuses
+		JOIN ride_statuses ON ride_statuses.ride_id = rides.id
+		WHERE
+			rides.user_id = ? AND
+			ranked_ride_statuses.rn = 1 AND
+			ranked_ride_statuses.status != 'COMPLETED'`,
+		userID,
+	); err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
 func appPostRides(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	req := &appPostRidesRequest{}
@@ -314,22 +344,9 @@ func appPostRides(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
-	rides := []Ride{}
-	if err := tx.SelectContext(ctx, &rides, `SELECT * FROM rides WHERE user_id = ?`, user.ID); err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-
-	continuingRideCount := 0
-	for _, ride := range rides {
-		status, err := getLatestRideStatus(ctx, tx, ride.ID)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		}
-		if status != "COMPLETED" {
-			continuingRideCount++
-		}
+	continuingRideCount, err := getContinuingRideCount(ctx, tx, user.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get continuing ride count"))
 	}
 
 	if continuingRideCount > 0 {
