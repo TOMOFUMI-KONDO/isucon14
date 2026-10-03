@@ -346,7 +346,7 @@ func appPostRides(w http.ResponseWriter, r *http.Request) {
 
 	continuingRideCount, err := getContinuingRideCount(ctx, tx, user.ID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get continuing ride count"))
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get continuing ride count: %w", err))
 	}
 
 	if continuingRideCount > 0 {
