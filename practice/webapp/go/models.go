@@ -16,6 +16,8 @@ type Chair struct {
 	UpdatedAt              time.Time    `db:"updated_at"`
 	TotalDistance          int          `db:"total_distance"`
 	TotalDistanceUpdatedAt sql.NullTime `db:"total_distance_updated_at"`
+	Latitude               int          `db:"latitude"`
+	Longitude              int          `db:"longitude"`
 }
 
 type ChairModel struct {

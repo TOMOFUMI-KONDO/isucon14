@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/oklog/ulid/v2"
 )
@@ -111,35 +112,16 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
-	chairLocationID := ulid.Make().String()
-	if _, err := tx.ExecContext(
-		ctx,
-		`INSERT INTO chair_locations (id, chair_id, latitude, longitude) VALUES (?, ?, ?, ?)`,
-		chairLocationID, chair.ID, req.Latitude, req.Longitude,
-	); err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-
-	location := &ChairLocation{}
-	if err := tx.GetContext(ctx, location, `SELECT * FROM chair_locations WHERE id = ?`, chairLocationID); err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-
+	recordedAt := time.Now()
 	if _, err := tx.ExecContext(
 		ctx,
 		`UPDATE chairs 
-		SET chairs.total_distance = IFNULL(chairs.total_distance, 0) + IFNULL((
-			SELECT
-				ABS(latitude - LAG(latitude) OVER (PARTITION BY chair_id ORDER BY created_at)) +
-				ABS(longitude - LAG(longitude) OVER (PARTITION BY chair_id ORDER BY created_at)) AS distance
-			FROM chair_locations
-			WHERE chair_id = ? AND id = ?
-		), 0),
+		SET chairs.total_distance = IFNULL(chairs.total_distance, 0) + ABS(? - chairs.latitude) + ABS(? - chairs.longitude),
+		    chairs.latitude = ?,
+		    chairs.longitude = ?,
 			chairs.total_distance_updated_at = ?
 		WHERE id = ?`,
-		chair.ID, location.ID, location.CreatedAt, chair.ID,
+		req.Latitude, req.Longitude, req.Latitude, req.Longitude, recordedAt, chair.ID,
 	); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -180,7 +162,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, &chairPostCoordinateResponse{
-		RecordedAt: location.CreatedAt.UnixMilli(),
+		RecordedAt: recordedAt.UnixMilli(),
 	})
 }
 
