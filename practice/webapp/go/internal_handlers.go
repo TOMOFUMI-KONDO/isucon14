@@ -7,6 +7,11 @@ import (
 	"net/http"
 )
 
+type ChairWithDistance struct {
+	Chair
+	Distance int `db:"distance"`
+}
+
 // このAPIをインスタンス内から一定間隔で叩かせることで、椅子とライドをマッチングさせる
 func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -22,7 +27,7 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	matched := &Chair{}
+	matched := &ChairWithDistance{}
 	if err := db.GetContext(
 		ctx,
 		matched,
