@@ -12,9 +12,9 @@ type RideWithDistance struct {
 	Distance int `db:"distance"`
 }
 
-type ChairWithDistance struct {
+type ChairWithTotalTime struct {
 	Chair
-	Distance int `db:"distance"`
+	TotalTime int `db:"total_time"`
 }
 
 // このAPIをインスタンス内から一定間隔で叩かせることで、椅子とライドをマッチングさせる
@@ -42,7 +42,7 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, ride := range rides {
-		matched := &ChairWithDistance{}
+		matched := &ChairWithTotalTime{}
 		if err := db.GetContext(
 			ctx,
 			matched,
