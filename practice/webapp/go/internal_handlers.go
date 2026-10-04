@@ -7,6 +7,11 @@ import (
 	"net/http"
 )
 
+type RideWithDistance struct {
+	Ride
+	Distance int `db:"distance"`
+}
+
 type ChairWithDistance struct {
 	Chair
 	Distance int `db:"distance"`
@@ -16,7 +21,7 @@ type ChairWithDistance struct {
 func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	var rides []Ride
+	var rides []RideWithDistance
 	if err := db.SelectContext(
 		ctx,
 		&rides,
