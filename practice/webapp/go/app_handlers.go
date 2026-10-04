@@ -641,7 +641,7 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-const appGetNotificationRetryAfterMs = 300
+const appGetNotificationRetryAfterMs = 1500
 
 type appGetNotificationResponse struct {
 	Data         *appGetNotificationResponseData `json:"data"`

@@ -166,7 +166,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-const chairtGetNotificationRetryAfterMs = 300
+const chairtGetNotificationRetryAfterMs = 1500
 
 type simpleUser struct {
 	ID   string `json:"id"`
