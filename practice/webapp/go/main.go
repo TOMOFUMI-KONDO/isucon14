@@ -17,6 +17,8 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+var paymentGatewayURL string
+
 var db *sqlx.DB
 
 func main() {
@@ -137,6 +139,7 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	paymentGatewayURL = req.PaymentServer
 
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
 }
