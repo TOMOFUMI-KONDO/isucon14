@@ -905,7 +905,7 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 		WHERE
 			is_active AND
 			is_empty AND
-			ABS(latitude - ?) + ABS(longitude - ?) < ?`,
+			ABS(latitude - ?) + ABS(longitude - ?) <= ?`,
 		coordinate.Latitude, coordinate.Longitude, distance,
 	)
 	if err != nil {
