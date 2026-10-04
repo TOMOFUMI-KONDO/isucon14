@@ -38,7 +38,7 @@ CREATE TABLE chairs
     total_distance_updated_at DATETIME(6),
     latitude INTEGER NOT NULL DEFAULT 0 COMMENT '経度',
     longitude INTEGER NOT NULL DEFAULT 0 COMMENT '緯度',
-    is_empty TINYINT(1) NOT NULL DEFAULT TRUE,
+    -- is_empty TINYINT(1) NOT NULL DEFAULT FALSE,
     PRIMARY KEY (id),
     KEY owner_id (owner_id),
     KEY access_token (access_token)

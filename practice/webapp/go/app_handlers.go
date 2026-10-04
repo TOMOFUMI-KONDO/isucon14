@@ -348,6 +348,7 @@ func appPostRides(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get continuing ride count: %w", err))
 	}
+
 	if continuingRideCount > 0 {
 		writeError(w, http.StatusConflict, errors.New("ride already exists"))
 		return
@@ -585,11 +586,6 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		ulid.Make().String(), rideID, "COMPLETED")
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to insert ride status: %w", err))
-		return
-	}
-
-	if _, err := tx.ExecContext(ctx, "UPDATE chairs SET is_empty = TRUE WHERE id = ?", ride.ChairID); err != nil {
-		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to set is_empty to the chair: %w", err))
 		return
 	}
 
