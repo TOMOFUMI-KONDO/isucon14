@@ -16,9 +16,8 @@ type ChairWithDistance struct {
 func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	// MEMO: 一旦最も待たせているリクエストに適当な空いている椅子マッチさせる実装とする。おそらくもっといい方法があるはず…
-	var ride Ride
-	if err := db.GetContext(ctx, &ride, `SELECT * FROM rides WHERE chair_id IS NULL ORDER BY created_at LIMIT 1`); err != nil {
+	var rides []Ride
+	if err := db.GetContext(ctx, &rides, `SELECT * FROM rides WHERE chair_id IS NULL ORDER BY created_at`); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -27,37 +26,39 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	matched := &ChairWithDistance{}
-	if err := db.GetContext(
-		ctx,
-		matched,
-		`SELECT
+	for _, ride := range rides {
+		matched := &ChairWithDistance{}
+		if err := db.GetContext(
+			ctx,
+			matched,
+			`SELECT
 			chairs.id,
 			ABS(chairs.latitude - ?) + ABS(chairs.longitude - ?) AS distance 
-		FROM chairs
-		JOIN chair_models ON chairs.model = chair_models.name
-		WHERE
-			chairs.is_active = TRUE AND
-			chairs.is_empty = TRUE
-		ORDER BY distance, chair_models.speed DESC
-		LIMIT 1`,
-		ride.PickupLatitude, ride.PickupLongitude,
-	); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			w.WriteHeader(http.StatusNoContent)
+			FROM chairs
+			JOIN chair_models ON chairs.model = chair_models.name
+			WHERE
+				chairs.is_active = TRUE AND
+				chairs.is_empty = TRUE
+			ORDER BY distance, chair_models.speed DESC
+			LIMIT 1`,
+			ride.PickupLatitude, ride.PickupLongitude,
+		); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get matched chair: %w", err))
+		}
+
+		if _, err := db.ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", matched.ID, ride.ID); err != nil {
+			writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to set chair_id to the ride: %w", err))
 			return
 		}
-		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get matched chair: %w", err))
-	}
 
-	if _, err := db.ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", matched.ID, ride.ID); err != nil {
-		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to set chair_id to the ride: %w", err))
-		return
-	}
-
-	if _, err := db.ExecContext(ctx, "UPDATE chairs SET is_empty = FALSE WHERE id = ?", matched.ID); err != nil {
-		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to set is_empty to the chair: %w", err))
-		return
+		if _, err := db.ExecContext(ctx, "UPDATE chairs SET is_empty = FALSE WHERE id = ?", matched.ID); err != nil {
+			writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to set is_empty to the chair: %w", err))
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusNoContent)
