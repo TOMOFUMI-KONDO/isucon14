@@ -239,6 +239,13 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
+
+		if yetSentRideStatus.Status == "COMPLETED" {
+			if _, err := tx.ExecContext(ctx, "UPDATE chairs SET is_empty = TRUE WHERE id = ?", ride.ChairID); err != nil {
+				writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to set is_empty to the chair: %w", err))
+				return
+			}
+		}
 	}
 
 	if err := tx.Commit(); err != nil {
