@@ -42,26 +42,27 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, ride := range rides {
-		order := "distance, chair_models.speed DESC"
-		if getRegion(ride.PickupLatitude) != getRegion(ride.DestinationLatitude) {
-			order = "chair_models.speed DESC, distance"
-		}
-
 		matched := &ChairWithDistance{}
 		if err := db.GetContext(
 			ctx,
 			matched,
 			`SELECT
-			chairs.id,
-			ABS(chairs.latitude - ?) + ABS(chairs.longitude - ?) AS distance 
+				chairs.id,
+				(
+					ABS(chairs.latitude - ?) + ABS(chairs.longitude - ?) +
+					ABS(? - ?) + ABS(? - ?)
+				) / chair_models.speed
+				AS total_time
 			FROM chairs
 			JOIN chair_models ON chairs.model = chair_models.name
 			WHERE
 				chairs.is_active = TRUE AND
 				chairs.is_empty = TRUE
-			ORDER BY ?
+			ORDER BY total_time
 			LIMIT 1`,
-			ride.PickupLatitude, ride.PickupLongitude, order,
+			ride.PickupLatitude, ride.PickupLongitude,
+			ride.PickupLatitude, ride.PickupLongitude,
+			ride.DestinationLatitude, ride.DestinationLongitude,
 		); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				w.WriteHeader(http.StatusNoContent)
