@@ -32,13 +32,14 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 		ctx,
 		matched,
 		`SELECT
-			id,
+			chairs.id,
 			ABS(chairs.latitude - ?) + ABS(chairs.longitude - ?) AS distance 
 		FROM chairs
+		JOIN chair_models ON chairs.model = chair_models.name
 		WHERE
-			is_active = TRUE AND
-			is_empty = TRUE
-		ORDER BY distance
+			chairs.is_active = TRUE AND
+			chairs.is_empty = TRUE
+		ORDER BY chairs.distance, chair_models.speed DESC
 		LIMIT 1`,
 		ride.PickupLatitude, ride.PickupLongitude,
 	); err != nil {
