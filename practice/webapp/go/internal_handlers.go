@@ -42,6 +42,11 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, ride := range rides {
+		order := "distance, chair_models.speed DESC"
+		if getRegion(ride.PickupLatitude) != getRegion(ride.DestinationLatitude) {
+			order = "chair_models.speed DESC, distance"
+		}
+
 		matched := &ChairWithDistance{}
 		if err := db.GetContext(
 			ctx,
@@ -54,9 +59,9 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 			WHERE
 				chairs.is_active = TRUE AND
 				chairs.is_empty = TRUE
-			ORDER BY distance, chair_models.speed DESC
+			ORDER BY ?
 			LIMIT 1`,
-			ride.PickupLatitude, ride.PickupLongitude,
+			ride.PickupLatitude, ride.PickupLongitude, order,
 		); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				w.WriteHeader(http.StatusNoContent)
@@ -77,4 +82,12 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func getRegion(latitude int) string {
+	if latitude < 100 {
+		return "ChairTown"
+	} else {
+		return "KoshikakeCity"
+	}
 }
