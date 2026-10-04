@@ -17,7 +17,7 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var rides []Ride
-	if err := db.GetContext(ctx, &rides, `SELECT * FROM rides WHERE chair_id IS NULL ORDER BY created_at`); err != nil {
+	if err := db.SelectContext(ctx, &rides, `SELECT * FROM rides WHERE chair_id IS NULL ORDER BY created_at`); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			w.WriteHeader(http.StatusNoContent)
 			return
