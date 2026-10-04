@@ -17,7 +17,17 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var rides []Ride
-	if err := db.SelectContext(ctx, &rides, `SELECT * FROM rides WHERE chair_id IS NULL ORDER BY created_at`); err != nil {
+	if err := db.SelectContext(
+		ctx,
+		&rides,
+		`SELECT
+			*,
+			ABS(pickup_latitude - destination_latitude) + ABS(pickup_longitude - destination_longitude) AS distance
+		FROM rides
+		WHERE chair_id IS NULL
+		ORDER BY
+			distance DESC,
+			created_at`); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			w.WriteHeader(http.StatusNoContent)
 			return
