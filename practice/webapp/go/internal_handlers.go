@@ -39,7 +39,7 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 		WHERE
 			chairs.is_active = TRUE AND
 			chairs.is_empty = TRUE
-		ORDER BY chairs.distance, chair_models.speed DESC
+		ORDER BY distance, chair_models.speed DESC
 		LIMIT 1`,
 		ride.PickupLatitude, ride.PickupLongitude,
 	); err != nil {
