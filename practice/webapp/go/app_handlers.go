@@ -900,30 +900,30 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 	err = tx.SelectContext(
 		ctx,
 		&chairs,
-		`SELECT * FROM chairs`,
+		`SELECT *
+		FROM chairs
+		WHERE
+			is_active AND
+			is_empty AND
+			ABS(latitude - ?) + ABS(longitude - ?) < ?`,
+		coordinate.Latitude, coordinate.Longitude, distance,
 	)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	nearbyChairs := []appGetNearbyChairsResponseChair{}
+	nearbyChairs := make([]appGetNearbyChairsResponseChair, 0, len(chairs))
 	for _, chair := range chairs {
-		if !chair.IsActive || !chair.IsEmpty {
-			continue
-		}
-
-		if calculateDistance(coordinate.Latitude, coordinate.Longitude, chair.Latitude, chair.Longitude) <= distance {
-			nearbyChairs = append(nearbyChairs, appGetNearbyChairsResponseChair{
-				ID:    chair.ID,
-				Name:  chair.Name,
-				Model: chair.Model,
-				CurrentCoordinate: Coordinate{
-					Latitude:  chair.Latitude,
-					Longitude: chair.Longitude,
-				},
-			})
-		}
+		nearbyChairs = append(nearbyChairs, appGetNearbyChairsResponseChair{
+			ID:    chair.ID,
+			Name:  chair.Name,
+			Model: chair.Model,
+			CurrentCoordinate: Coordinate{
+				Latitude:  chair.Latitude,
+				Longitude: chair.Longitude,
+			},
+		})
 	}
 
 	retrievedAt := &time.Time{}
