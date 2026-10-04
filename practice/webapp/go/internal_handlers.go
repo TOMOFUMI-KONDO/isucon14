@@ -26,18 +26,16 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 	if err := db.GetContext(
 		ctx,
 		matched,
-		`SELECT *
-				FROM chairs
-				INNER JOIN (
-					SELECT id
-					FROM chairs
-					WHERE
-						is_active = TRUE AND
-						is_empty = TRUE
-					ORDER BY RAND()
-					LIMIT 1
-				) AS tmp ON chairs.id = tmp.id
-				LIMIT 1`,
+		`SELECT
+			id,
+			ABS(chairs.latitude - ?) + ABS(chairs.longitude - ?) AS distance 
+		FROM chairs
+		WHERE
+			is_active = TRUE AND
+			is_empty = TRUE
+		ORDER BY distance
+		LIMIT 1`,
+		ride.PickupLatitude, ride.PickupLongitude,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			w.WriteHeader(http.StatusNoContent)
