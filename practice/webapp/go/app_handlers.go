@@ -563,10 +563,11 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	updatedAt := time.Now()
 	result, err := tx.ExecContext(
 		ctx,
-		`UPDATE rides SET evaluation = ? WHERE id = ?`,
-		req.Evaluation, rideID)
+		`UPDATE rides SET evaluation = ?, updated_at = ? WHERE id = ?`,
+		req.Evaluation, updatedAt, rideID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to update ride evaluation: %w", err))
 		return
@@ -585,15 +586,6 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		ulid.Make().String(), rideID, "COMPLETED")
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to insert ride status: %w", err))
-		return
-	}
-
-	if err := tx.GetContext(ctx, ride, `SELECT * FROM rides WHERE id = ?`, rideID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			writeError(w, http.StatusNotFound, errors.New("ride not found"))
-			return
-		}
-		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get ride: %w", err))
 		return
 	}
 
@@ -637,7 +629,7 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, &appPostRideEvaluationResponse{
-		CompletedAt: ride.UpdatedAt.UnixMilli(),
+		CompletedAt: updatedAt.UnixMilli(),
 	})
 }
 
