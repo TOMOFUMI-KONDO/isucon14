@@ -9,6 +9,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 var erroredUpstream = errors.New("errored upstream")
@@ -22,7 +24,7 @@ type paymentGatewayGetPaymentsResponseOne struct {
 	Status string `json:"status"`
 }
 
-var semPaymentGateway = make(chan struct{}, 10)
+// var semPaymentGateway = make(chan struct{}, 10)
 
 func requestPaymentGatewayPostPayment(ctx context.Context, paymentGatewayURL string, token string, param *paymentGatewayPostPaymentRequest, retrieveRidesOrderByCreatedAtAsc func() ([]Ride, error)) error {
 	b, err := json.Marshal(param)
@@ -32,11 +34,12 @@ func requestPaymentGatewayPostPayment(ctx context.Context, paymentGatewayURL str
 
 	// 失敗したらとりあえずリトライ
 	// FIXME: 社内決済マイクロサービスのインフラに異常が発生していて、同時にたくさんリクエストすると変なことになる可能性あり
+	key := uuid.NewString()
 	retry := 0
 	for {
 		err := func() error {
-			semPaymentGateway <- struct{}{}
-			defer func() { <-semPaymentGateway }()
+			// semPaymentGateway <- struct{}{}
+			// defer func() { <-semPaymentGateway }()
 
 			req, err := http.NewRequestWithContext(ctx, http.MethodPost, paymentGatewayURL+"/payments", bytes.NewBuffer(b))
 			if err != nil {
@@ -44,48 +47,20 @@ func requestPaymentGatewayPostPayment(ctx context.Context, paymentGatewayURL str
 			}
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("Authorization", "Bearer "+token)
+			req.Header.Set("Idempotency-Key", key)
 
 			res, err := http.DefaultClient.Do(req)
 			if err != nil {
-				return fmt.Errorf("failed to post request: %w")
+				return fmt.Errorf("failed to post request: %w", err)
 			}
 			defer res.Body.Close()
 
-			if res.StatusCode != http.StatusNoContent {
-				// エラーが返ってきても成功している場合があるので、社内決済マイクロサービスに問い合わせ
-				getReq, err := http.NewRequestWithContext(ctx, http.MethodGet, paymentGatewayURL+"/payments", bytes.NewBuffer([]byte{}))
-				if err != nil {
-					return fmt.Errorf("failed to create get req: %w", err)
-				}
-				getReq.Header.Set("Authorization", "Bearer "+token)
-
-				getRes, err := http.DefaultClient.Do(getReq)
-				if err != nil {
-					return fmt.Errorf("failed to get request: %w", err)
-				}
-				defer res.Body.Close()
-
-				// GET /payments は障害と関係なく200が返るので、200以外は回復不能なエラーとする
-				if getRes.StatusCode != http.StatusOK {
-					return fmt.Errorf("[GET /payments] unexpected status code (%d)", getRes.StatusCode)
-				}
-				var payments []paymentGatewayGetPaymentsResponseOne
-				if err := json.NewDecoder(getRes.Body).Decode(&payments); err != nil {
-					return fmt.Errorf("failed to decode get resp: %w", err)
-				}
-
-				rides, err := retrieveRidesOrderByCreatedAtAsc()
-				if err != nil {
-					return fmt.Errorf("failed to retrieve rides: %w", err)
-				}
-
-				if len(rides) != len(payments) {
-					return fmt.Errorf("unexpected number of payments: %d != %d. %w", len(rides), len(payments), erroredUpstream)
-				}
-
+			switch res.StatusCode {
+			case http.StatusNoContent:
 				return nil
+			default:
+				return fmt.Errorf("unexpected status: %d", res.StatusCode)
 			}
-			return nil
 		}()
 		if err != nil {
 			if retry < 5 {
