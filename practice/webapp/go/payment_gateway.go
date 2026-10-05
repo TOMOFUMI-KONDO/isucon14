@@ -66,7 +66,7 @@ func requestPaymentGatewayPostPayment(ctx context.Context, paymentGatewayURL str
 		}()
 		if err != nil {
 			muPaymentGateway.Lock()
-			time.Sleep(1000 * time.Millisecond)
+			time.Sleep(300 * time.Millisecond)
 			muPaymentGateway.Unlock()
 
 			if retry < 5 {
