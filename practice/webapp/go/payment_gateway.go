@@ -64,7 +64,7 @@ func requestPaymentGatewayPostPayment(ctx context.Context, paymentGatewayURL str
 		}()
 		if err != nil {
 			if retry < 5 {
-				slog.Warn("Failed to request payment gateway, retrying...", err)
+				slog.Warn("Failed to request payment gateway, retrying... (%d)", retry, err)
 				retry++
 				time.Sleep(100 * time.Millisecond)
 				continue
