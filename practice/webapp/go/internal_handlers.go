@@ -69,16 +69,17 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get matched chair: %w", err))
+			continue
 		}
 
 		if _, err := db.ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", matched.ID, ride.ID); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to set chair_id to the ride: %w", err))
-			return
+			continue
 		}
 
 		if _, err := db.ExecContext(ctx, "UPDATE chairs SET is_empty = FALSE WHERE id = ?", matched.ID); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to set is_empty to the chair: %w", err))
-			return
+			continue
 		}
 	}
 
