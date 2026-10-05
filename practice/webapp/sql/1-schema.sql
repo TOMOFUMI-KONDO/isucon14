@@ -125,7 +125,6 @@ CREATE TABLE ride_statuses
     chair_sent_at DATETIME(6) NULL COMMENT '椅子への状態通知日時',
     PRIMARY KEY (id),
     KEY ride_id_created_at (ride_id, created_at),
-    KEY ride_id_created_at_desc (ride_id, created_at DESC),
     KEY ride_id_chair_sent_at_created_at (
         ride_id, chair_sent_at, created_at
     ),
