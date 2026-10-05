@@ -14,7 +14,7 @@ type RideWithDistance struct {
 
 type ChairWithTotalTime struct {
 	Chair
-	TotalTime int `db:"total_time"`
+	TotalTime float64 `db:"total_time"`
 }
 
 // このAPIをインスタンス内から一定間隔で叩かせることで、椅子とライドをマッチングさせる
