@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,7 +25,7 @@ type paymentGatewayGetPaymentsResponseOne struct {
 	Status string `json:"status"`
 }
 
-// var semPaymentGateway = make(chan struct{}, 1)
+var muPaymentGateway sync.RWMutex
 
 func requestPaymentGatewayPostPayment(ctx context.Context, paymentGatewayURL string, token string, param *paymentGatewayPostPaymentRequest, retrieveRidesOrderByCreatedAtAsc func() ([]Ride, error)) error {
 	b, err := json.Marshal(param)
@@ -38,8 +39,9 @@ func requestPaymentGatewayPostPayment(ctx context.Context, paymentGatewayURL str
 	retry := 0
 	for {
 		err := func() error {
-			// semPaymentGateway <- struct{}{}
-			// defer func() { <-semPaymentGateway }()
+			muPaymentGateway.RLock()
+			//lint:ignore SA2001 意図的に空にしている。write lock の解除待ちだけを行う。
+			muPaymentGateway.RUnlock()
 
 			req, err := http.NewRequestWithContext(ctx, http.MethodPost, paymentGatewayURL+"/payments", bytes.NewBuffer(b))
 			if err != nil {
@@ -63,10 +65,13 @@ func requestPaymentGatewayPostPayment(ctx context.Context, paymentGatewayURL str
 			}
 		}()
 		if err != nil {
+			muPaymentGateway.Lock()
+			time.Sleep(1000 * time.Millisecond)
+			muPaymentGateway.Unlock()
+
 			if retry < 5 {
 				slog.Warn("Failed to request payment gateway, retrying...", retry, err)
 				retry++
-				time.Sleep(300 * time.Millisecond)
 				continue
 			} else {
 				slog.Warn("Failed to request payment gateway", err)
