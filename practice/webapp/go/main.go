@@ -142,12 +142,12 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 	}
 	paymentGatewayURL = req.PaymentServer
 
-	var chairModels *[]ChairModel
+	var chairModels []ChairModel
 	if err := db.SelectContext(ctx, &chairModels, "SELECT * FROM chair_models"); err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to select chair_models: %w", err))
 		return
 	}
-	for _, cm := range *chairModels {
+	for _, cm := range chairModels {
 		chairModelMap[cm.Name] = cm
 	}
 
