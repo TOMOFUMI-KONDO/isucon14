@@ -148,9 +148,9 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, cm := range chairModels {
+		slog.Info("chair model", cm)
 		chairModelMap[cm.Name] = cm
 	}
-	slog.Info("chair models", chairModels)
 
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
 }
