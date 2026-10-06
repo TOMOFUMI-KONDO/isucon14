@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -64,11 +63,18 @@ func requestPaymentGatewayPostPayment(ctx context.Context, paymentGatewayURL str
 			}
 		}()
 		if err != nil {
-			slog.Warn("Failed to request payment gateway, retrying...", retry, err)
-			retry++
+			// muPaymentGateway.Lock()
+			// time.Sleep(100 * time.Millisecond)
+			// muPaymentGateway.Unlock()
 
-			time.Sleep(100 * time.Millisecond)
-			continue
+			if retry < 5 {
+				slog.Warn("Failed to request payment gateway, retrying...", retry, err)
+				retry++
+				continue
+			} else {
+				slog.Warn("Failed to request payment gateway", err)
+				return err
+			}
 		}
 		break
 	}
