@@ -18,7 +18,7 @@ import (
 )
 
 var paymentGatewayURL string
-var chairModelMap map[string]ChairModel
+var chairModelMap = make(map[string]ChairModel)
 
 var db *sqlx.DB
 
