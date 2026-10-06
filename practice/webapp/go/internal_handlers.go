@@ -13,9 +13,9 @@ type RideWithDistance struct {
 	Distance int `db:"distance"`
 }
 
-type ChairWithTotalTime struct {
+type ChairWithSpeed struct {
 	Chair
-	TotalTime float64 `db:"total_time"`
+	speed int `db:"speed"`
 }
 
 // このAPIをインスタンス内から一定間隔で叩かせることで、椅子とライドをマッチングさせる
@@ -42,11 +42,16 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var chairs []Chair
+	var chairs []ChairWithSpeed
 	if err := db.SelectContext(
 		ctx,
 		&chairs,
-		`SELECT * FROM chairs WHERE is_active = TRUE AND is_empty = TRUE`,
+		`SELECT chairs.*, chair_models.speed
+		FROM chairs
+		JOIN chair_models ON chair_models.name = chairs.model
+		WHERE
+			chairs.is_active = TRUE AND
+			chairs.is_empty = TRUE`,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			w.WriteHeader(http.StatusNoContent)
@@ -63,7 +68,7 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 		for i, chair := range chairs {
 			pickupDistance := abs(chair.Latitude-ride.PickupLatitude) + abs(chair.Longitude-ride.PickupLongitude)
 			rideDistance := abs(ride.PickupLatitude-ride.DestinationLatitude) + abs(ride.PickupLongitude-ride.DestinationLongitude)
-			totalTimeTmp := (pickupDistance + rideDistance) / chairModelMap[chair.Model].Speed
+			totalTimeTmp := (pickupDistance + rideDistance) / chair.speed
 			if matchedID == "" || totalTimeTmp < totalTime {
 				matchedID = chair.ID
 				matchedIdx = i

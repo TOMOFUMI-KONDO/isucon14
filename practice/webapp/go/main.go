@@ -18,7 +18,6 @@ import (
 )
 
 var paymentGatewayURL string
-var chairModelMap = make(map[string]ChairModel)
 
 var db *sqlx.DB
 
@@ -141,16 +140,6 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	paymentGatewayURL = req.PaymentServer
-
-	var chairModels []ChairModel
-	if err := db.SelectContext(ctx, &chairModels, "SELECT * FROM chair_models"); err != nil {
-		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to select chair_models: %w", err))
-		return
-	}
-	for _, cm := range chairModels {
-		slog.Info("chair model", cm)
-		chairModelMap[cm.Name] = cm
-	}
 
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
 }
