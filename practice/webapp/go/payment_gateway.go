@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -33,7 +35,7 @@ func requestPaymentGatewayPostPayment(ctx context.Context, paymentGatewayURL str
 	// 失敗したらとりあえずリトライ
 	// FIXME: 社内決済マイクロサービスのインフラに異常が発生していて、同時にたくさんリクエストすると変なことになる可能性あり
 	key := uuid.NewString()
-	// retry := 0
+	retry := 0
 	for {
 		err := func() error {
 			// muPaymentGateway.RLock()
@@ -62,14 +64,12 @@ func requestPaymentGatewayPostPayment(ctx context.Context, paymentGatewayURL str
 			}
 		}()
 		if err != nil {
-			// slog.Warn("Failed to request payment gateway, retrying...", retry, err)
-			// retry++
-			//
-			// time.Sleep(100 * time.Millisecond)
-			// continue
-			return err
-		}
+			slog.Warn("Failed to request payment gateway, retrying...", retry, err)
+			retry++
 
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
 		break
 	}
 
