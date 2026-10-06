@@ -63,7 +63,7 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 
 	for _, ride := range rides {
 		matchedID := ""
-		var matchedIdx int
+		matchedIdx := -1
 		totalTime := 1 << 10
 		for i, chair := range chairs {
 			pickupDistance := abs(chair.Latitude-ride.PickupLatitude) + abs(chair.Longitude-ride.PickupLongitude)
@@ -76,7 +76,9 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		chairs = slices.Delete(chairs, matchedIdx, matchedIdx+1)
+		if matchedIdx != -1 {
+			chairs = slices.Delete(chairs, matchedIdx, matchedIdx+1)
+		}
 
 		if _, err := db.ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", matchedID, ride.ID); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to set chair_id to the ride: %w", err))
