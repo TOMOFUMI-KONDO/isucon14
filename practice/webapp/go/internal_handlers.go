@@ -15,7 +15,7 @@ type RideWithDistance struct {
 
 type ChairWithSpeed struct {
 	Chair
-	speed int `db:"speed"`
+	Speed int `db:"speed"`
 }
 
 // このAPIをインスタンス内から一定間隔で叩かせることで、椅子とライドをマッチングさせる
