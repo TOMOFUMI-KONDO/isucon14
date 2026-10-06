@@ -119,7 +119,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 		SET chairs.total_distance = IF(
 				chairs.total_distance_updated_at IS NULL,
 				0,
-				chairs.total_distance + ABS(? - chairs.latitude) + ABS(? - chairs.longitude),
+				chairs.total_distance + ABS(? - chairs.latitude) + ABS(? - chairs.longitude)
 			)
 		    chairs.latitude = ?,
 		    chairs.longitude = ?,
