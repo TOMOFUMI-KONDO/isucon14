@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 )
 
 type RideWithDistance struct {
@@ -37,47 +38,47 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
-		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get ride: %w", err))
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get rides: %w", err))
+		return
+	}
+
+	var chairs []Chair
+	if err := db.SelectContext(
+		ctx,
+		&chairs,
+		`SELECT * FROM chairs WHERE is_active = TRUE AND is_empty = TRUE`,
+	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to chairs: %w", err))
 		return
 	}
 
 	for _, ride := range rides {
-		matched := &ChairWithTotalTime{}
-		if err := db.GetContext(
-			ctx,
-			matched,
-			`SELECT
-				chairs.id,
-				(
-					ABS(chairs.latitude - ?) + ABS(chairs.longitude - ?) +
-					ABS(? - ?) + ABS(? - ?)
-				) / chair_models.speed
-				AS total_time
-			FROM chairs
-			JOIN chair_models ON chairs.model = chair_models.name
-			WHERE
-				chairs.is_active = TRUE AND
-				chairs.is_empty = TRUE
-			ORDER BY total_time
-			LIMIT 1`,
-			ride.PickupLatitude, ride.PickupLongitude,
-			ride.PickupLatitude, ride.PickupLongitude,
-			ride.DestinationLatitude, ride.DestinationLongitude,
-		); err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				w.WriteHeader(http.StatusNoContent)
-				return
+		matchedID := ""
+		var matchedIdx int
+		totalTime := 1 << 10
+		for i, chair := range chairs {
+			pickupDistance := abs(chair.Latitude-ride.PickupLatitude) + abs(chair.Longitude-ride.PickupLongitude)
+			rideDistance := abs(ride.PickupLatitude-ride.DestinationLatitude) + abs(ride.PickupLongitude-ride.DestinationLongitude)
+			totalTimeTmp := (pickupDistance + rideDistance) / chairModelMap[chair.Model].Speed
+			if matchedID == "" || totalTimeTmp < totalTime {
+				matchedID = chair.ID
+				matchedIdx = i
+				totalTime = totalTimeTmp
 			}
-			writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to get matched chair: %w", err))
-			continue
 		}
 
-		if _, err := db.ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", matched.ID, ride.ID); err != nil {
+		chairs = slices.Delete(chairs, matchedIdx, matchedIdx+1)
+
+		if _, err := db.ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", matchedID, ride.ID); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to set chair_id to the ride: %w", err))
 			continue
 		}
 
-		if _, err := db.ExecContext(ctx, "UPDATE chairs SET is_empty = FALSE WHERE id = ?", matched.ID); err != nil {
+		if _, err := db.ExecContext(ctx, "UPDATE chairs SET is_empty = FALSE WHERE id = ?", matchedID); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to set is_empty to the chair: %w", err))
 			continue
 		}
