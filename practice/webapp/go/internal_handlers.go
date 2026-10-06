@@ -68,7 +68,7 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 		for i, chair := range chairs {
 			pickupDistance := abs(chair.Latitude-ride.PickupLatitude) + abs(chair.Longitude-ride.PickupLongitude)
 			rideDistance := abs(ride.PickupLatitude-ride.DestinationLatitude) + abs(ride.PickupLongitude-ride.DestinationLongitude)
-			totalTimeTmp := (pickupDistance + rideDistance) / chair.speed
+			totalTimeTmp := (pickupDistance + rideDistance) / chair.Speed
 			if matchedID == "" || totalTimeTmp < totalTime {
 				matchedID = chair.ID
 				matchedIdx = i
